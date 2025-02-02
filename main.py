@@ -1,10 +1,12 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 import requests
 import pandas as pd
 import time
 import os
 
 app = Flask(__name__)
+CORS(app)
 
 channel_id = '2826828'
 read_api_key = 'YL0E6VXZF2HSF0AK'

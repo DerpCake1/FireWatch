@@ -89,8 +89,8 @@
                 const data = await response.json();
 
                 // Check if the response has a valid result
-                if (data.fire_risk) {
-                    document.getElementById('fireRisk').innerText = `Risk of Fire: ${data.fire_risk}`;
+                if (data.fire_risk === 0 || data.fire_risk === 1) {
+                    document.getElementById('fireRisk').innerText = `Risk of Fire: ${data.fire_risk === 0 ? "No" : "Yes"}`;
 
                 } else {
                     document.getElementById('fireRisk').innerText = 'Failed to fetch fire risk.';
