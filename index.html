@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Data and Fire Risk Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f3f4f6;
+        }
+        .container {
+            text-align: center;
+        }
+        .data-box {
+            margin: 10px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .data-box h2 {
+            margin: 0 0 10px;
+            font-size: 1.5em;
+        }
+        .data-box p {
+            font-size: 1.2em;
+            margin: 5px 0;
+        }
+        .loading {
+            font-size: 1.5em;
+            color: #888;
+        }
+        #chart-container {
+            width: 80%;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        canvas {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Live Data from ThingSpeak</h1>
+        <div id="data-container" class="data-box">
+            <p class="loading">Loading data...</p>
+        </div>
+
+        <!-- Three separate chart containers -->
+        <div id="chart-container">
+            <canvas id="field1Chart"></canvas>
+            <canvas id="field2Chart"></canvas>
+            <canvas id="field3Chart"></canvas>
+        </div>
+
+        <!-- Fire Risk Status Section -->
+        <div id="fireRiskContainer" class="data-box">
+            <h2>Fire Risk Status</h2>
+            <p id="fireRisk">Loading...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+    
+    <script>
+        // Replace with your ThingSpeak channel ID and API key
+        const channelId = "2826828"; // Updated channel ID
+        const apiKey = "YL0E6VXZF2HSF0AK"; // Your API key
+
+        // Initialize charts as null so we can destroy them
+        let field1Chart = null;
+        let field2Chart = null;
+        let field3Chart = null;
+
+        // Function to fetch fire risk from the Flask backend
+        async function fetchFireRisk() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/fire-risk');  // Adjust URL based on where the server is running
+                const data = await response.json();
+
+                // Check if the response has a valid result
+                if (data.fire_risk) {
+                    document.getElementById('fireRisk').innerText = `Risk of Fire: ${data.fire_risk}`;
+
+                } else {
+                    document.getElementById('fireRisk').innerText = 'Failed to fetch fire risk.';
+                }
+            } catch (error) {
+                console.error('Error fetching fire risk:', error);
+                document.getElementById('fireRisk').innerText = 'Error fetching data.';
+            }
+        }
+
+        // Fetch data every 10 seconds to keep it live
+        setInterval(fetchData, 10000);
+        
+        // Initial fetch for fire risk and ThingSpeak data
+        window.onload = () => {
+            fetchFireRisk();
+            fetchData();
+        };
+
+        // Function to fetch data from ThingSpeak
+        async function fetchData() {
+            const url = `https://api.thingspeak.com/channels/${channelId}/feeds.json?api_key=${apiKey}&results=50`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                console.log(data); // Log the response for debugging
+
+                if (data.feeds && data.feeds.length > 0) {
+                    // Extract the data for all fields, using a dynamic approach for multiple fields
+                    const timestamps = data.feeds.map(feed => feed.created_at.substr(11, 8));
+                    const field1Data = data.feeds.map(feed => feed.field1 || null); // Use null if field1 is undefined
+                    const field2Data = data.feeds.map(feed => feed.field2 || null); // Use null if field2 is undefined
+                    const field3Data = data.feeds.map(feed => feed.field3 || null); // Use null if field3 is undefined
+
+                    // Log the data for debugging
+                    console.log('Field 1 Data:', field1Data);
+                    console.log('Field 2 Data:', field2Data);
+                    console.log('Field 3 Data:', field3Data);
+
+                    // Update the UI with the most recent values
+                    document.getElementById('data-container').innerHTML = `
+                        <h2>Most Recent Field Data:</h2>
+                        <p>Field 1 Value: ${field1Data[field1Data.length - 1]}</p>
+                        <p>Field 2 Value: ${field2Data[field2Data.length - 1]}</p>
+                        <p>Field 3 Value: ${field3Data[field3Data.length - 1]}</p>
+                    `;
+
+                    // Destroy previous charts if they exist
+                    if (field1Chart) field1Chart.destroy();
+                    if (field2Chart) field2Chart.destroy();
+                    if (field3Chart) field3Chart.destroy();
+
+                    // Draw three separate charts if data is available for each field
+                    if (field1Data.length > 0) {
+                        field1Chart = drawChart('field1Chart', timestamps, field1Data, 'Field 1 Data', 'rgba(75, 192, 192, 1)');
+                    }
+                    if (field2Data.length > 0) {
+                        field2Chart = drawChart('field2Chart', timestamps, field2Data, 'Field 2 Data', 'rgba(153, 102, 255, 1)');
+                    }
+                    if (field3Data.length > 0) {
+                        field3Chart = drawChart('field3Chart', timestamps, field3Data, 'Field 3 Data', 'rgba(255, 159, 64, 1)');
+                    }
+                } else {
+                    throw new Error("No data found in the response");
+                }
+            } catch (error) {
+                console.error(error); // Log the error for debugging
+                document.getElementById('data-container').innerHTML = `
+                    <h2>Error fetching data</h2>
+                    <p>Please try again later.</p>
+                `;
+            }
+        }
+
+        // Function to draw individual charts for each field
+        function drawChart(chartId, labels, data, label, color) {
+            const ctx = document.getElementById(chartId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line', // Line chart type
+                data: {
+                    labels: labels, // X-axis labels (timestamps)
+                    datasets: [{
+                        label: label,
+                        data: data, // Y-axis data
+                        borderColor: color,
+                        backgroundColor: color.replace('1)', '0.2)'), // Light transparency for background
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Value: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Timestamp'
+                            },
+                            ticks: {
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Value'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+
+</body>
+</html>
