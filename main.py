@@ -1,11 +1,13 @@
+from flask import Flask, jsonify
 import requests
 import pandas as pd
 import time
 import os
 
+app = Flask(__name__)
+
 channel_id = '2826828'
 read_api_key = 'YL0E6VXZF2HSF0AK'
-
 url = f'https://api.thingspeak.com/channels/{channel_id}/feeds.json'
 
 params = {
@@ -41,15 +43,18 @@ def fire_risk(humidity, temperature, wind_speed):
     else:
         return 0
 
-while True:
+
+@app.route('/fire-risk', methods=['GET'])
+def get_fire_risk():
     data = fetch_data()
-    print(data)
+
+    if data.empty:
+        return jsonify({"error": "No data to process"}), 500
 
     last_5_values = data.tail(5).drop(columns=['created_at'])
-
-    last_5_values['Humidity'] = last_5_values['Humidity'].astype(float)
-    last_5_values['Temperature'] = last_5_values['Temperature'].astype(float)
-    last_5_values['Wind Speed'] = last_5_values['Wind Speed'].astype(float)
+    last_5_values['Humidity'] = pd.to_numeric(last_5_values['Humidity'], errors='coerce')
+    last_5_values['Temperature'] = pd.to_numeric(last_5_values['Temperature'], errors='coerce')
+    last_5_values['Wind Speed'] = pd.to_numeric(last_5_values['Wind Speed'], errors='coerce')
 
     column_sums = last_5_values.sum()
 
@@ -57,6 +62,25 @@ while True:
     avg_temp = column_sums['Temperature'] / 5
     avg_wind_speed = column_sums['Wind Speed'] / 5
 
-    result = "Yes" if fire_risk(avg_humidity, avg_temp, avg_wind_speed) else "No"
-    print(f"Risk of Fire: {result}")
-    time.sleep(10)
+    result = fire_risk(avg_humidity, avg_temp, avg_wind_speed)
+
+    return jsonify({"fire_risk": result})
+
+if __name__ == '__main__':
+    app.run(debug=True)
+## while True:
+##   data = fetch_data()
+##   print(data)
+
+##    last_5_values = data.tail(5).drop(columns=['created_at'])
+##    last_5_values['Humidity'] = last_5_values['Humidity'].astype(float)
+##    last_5_values['Temperature'] = last_5_values['Temperature'].astype(float)
+##    last_5_values['Wind Speed'] = last_5_values['Wind Speed'].astype(float)
+##    column_sums = last_5_values.sum()
+##    avg_humidity = column_sums['Humidity'] / 5
+##    avg_temp = column_sums['Temperature'] / 5
+##    avg_wind_speed = column_sums['Wind Speed'] / 5
+
+##    result = "Yes" if fire_risk(avg_humidity, avg_temp, avg_wind_speed) else "No"
+##   print(f"Risk of Fire: {result}")
+##    time.sleep(20)
