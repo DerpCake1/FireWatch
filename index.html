@@ -146,13 +146,13 @@
 
                     // Draw three separate charts if data is available for each field
                     if (field1Data.length > 0) {
-                        field1Chart = drawChart('field1Chart', timestamps, field1Data, 'Field 1 Data', 'rgba(75, 192, 192, 1)');
+                        field1Chart = drawChart('field1Chart', timestamps, field1Data, 'Humidity Data', 'rgba(75, 192, 192, 1)');
                     }
                     if (field2Data.length > 0) {
-                        field2Chart = drawChart('field2Chart', timestamps, field2Data, 'Field 2 Data', 'rgba(153, 102, 255, 1)');
+                        field2Chart = drawChart('field2Chart', timestamps, field2Data, 'Temperature Data', 'rgba(153, 102, 255, 1)');
                     }
                     if (field3Data.length > 0) {
-                        field3Chart = drawChart('field3Chart', timestamps, field3Data, 'Field 3 Data', 'rgba(255, 159, 64, 1)');
+                        field3Chart = drawChart('field3Chart', timestamps, field3Data, 'Wind Speed Data', 'rgba(255, 159, 64, 1)');
                     }
                 } else {
                     throw new Error("No data found in the response");
