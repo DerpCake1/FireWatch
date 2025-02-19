@@ -1,12 +1,5 @@
 # limitd
 
-A github repo for MakerHacks 25' with Jordan Tran, Samit Rath, and Sebastian Sandoval.
-
-Wildfire Risk Assessment System
-This project uses a **temperature/humidity sensor** and a **rotary encoder** (acting as an anemometer) to collect environmental data. The data is sent to **ThingSpeak for live monitoring and analyzed using a decision tree algorithm to assess the risk of wildfires in a specific area.
-
-# limitd
-
 A GitHub repo for MakerHacks 25' with Jordan Tran, Samit Rath, and Sebastian Sandoval.
 
 ## Wildfire Risk Assessment System
